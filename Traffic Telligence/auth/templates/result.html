@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Traffic Volume Prediction Result</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h4>Traffic Volume Prediction Result</h4>
+        </div>
+        <div class="card-body">
+            <p><strong>Predicted Traffic Volume:</strong> {{ predicted_volume }} vehicles</p>
+
+            <hr>
+            <h5>Input Summary:</h5>
+            <ul>
+                <li><strong>Holiday:</strong> {{ inputs['Holiday'] }}</li>
+                <li><strong>Temperature (K):</strong> {{ inputs['Temp (K)'] }}</li>
+                <li><strong>Rain (mm):</strong> {{ inputs['Rain (mm)'] }}</li>
+                <li><strong>Snow (mm):</strong> {{ inputs['Snow (mm)'] }}</li>
+                <li><strong>Weather:</strong> {{ inputs['Weather'] }}</li>
+                <li><strong>Date:</strong> {{ inputs['Date'] }}</li>
+                <li><strong>Time:</strong> {{ inputs['Time'] }}</li>
+            </ul>
+
+            <a href="/" class="btn btn-secondary">Go Back</a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

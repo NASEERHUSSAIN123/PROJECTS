@@ -1,0 +1,10 @@
+[
+    {
+        "role": "user",
+        "content": "Who is elon musk?"
+    },
+    {
+        "role": "assistant",
+        "content": "Elon Musk is a businessman known for his leadership of Tesla, SpaceX, and X (formerly Twitter). He was born on June 28, 1971, and has made significant contributions to the electric car industry through Tesla and the private space industry through SpaceX. As of 2025, he has a net worth of around $400 billion. Additionally, he has cofounded seven companies, including electric car maker Tesla, rocket producer SpaceX, and artificial intelligence startup xAI."
+    }
+]

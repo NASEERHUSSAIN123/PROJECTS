@@ -1,0 +1,14 @@
+Let's write a simple "Hello, World!" program in C.
+
+Here's the code:
+```
+#include<stdio.h>
+
+int main() {
+    printf("Hello, World!\n");
+    return 0;
+}
+```
+I've written this code in a Notepad-like format. You can copy and paste this into your own Notepad file, save it with a `.c` extension (e.g., `hello.c`), and then compile and run it using a C compiler!
+
+Would you like me to explain what each line of the code does, or would you like to try something else?

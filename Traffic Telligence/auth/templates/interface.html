@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Traffic Volume Prediction</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-sm-8">
+      <h2 class="text-center">Traffic Volume Prediction</h2>
+      <form action="/process" method="POST" onsubmit="return validateForm()">
+        <div class="form-group">
+          <label for="holiday">Is it a Holiday?</label>
+          <select class="form-control" id="holiday" name="holiday" required>
+            <option value="" disabled selected>Select</option>
+            <option value="1">Yes</option>
+            <option value="0">No</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="temp">Temperature (in Kelvin)</label>
+          <input type="number" class="form-control" id="temp" name="temp" step="any" required>
+        </div>
+
+        <div class="form-group">
+          <label for="rain">Rain (in mm)</label>
+          <input type="number" class="form-control" id="rain" name="rain" step="any" required>
+        </div>
+
+        <div class="form-group">
+          <label for="snow">Snow (in mm)</label>
+          <input type="number" class="form-control" id="snow" name="snow" step="any" required>
+        </div>
+
+        <div class="form-group">
+            <label for="weather">Weather Condition</label>
+            <select class="form-control" id="weather" name="weather" required>
+                <option value="" disabled selected>Select Weather</option>
+                <option value="Clear">Clear</option>
+                <option value="Clouds">Clouds</option>
+                <option value="Rain">Rain</option>
+                <option value="Drizzle">Drizzle</option>
+                <option value="Mist">Mist</option>
+                <option value="Haze">Haze</option>
+                <option value="Fog">Fog</option>
+                <option value="Thunderstorm">Thunderstorm</option>
+                <option value="Snow">Snow</option>
+                <option value="Squall">Squall</option>
+                <option value="Smoke">Smoke</option>
+        </select>
+        </div>
+
+        <div class="form-group">
+          <label for="day">Day</label>
+          <input type="number" class="form-control" id="day" name="day" min="1" max="31" required>
+        </div>
+
+        <div class="form-group">
+          <label for="month">Month</label>
+          <input type="number" class="form-control" id="month" name="month" min="1" max="12" required>
+        </div>
+
+        <div class="form-group">
+          <label for="year">Year</label>
+          <input type="number" class="form-control" id="year" name="year" min="2000" max="2030" required>
+        </div>
+
+        <div class="form-group">
+          <label for="hours">Hour (24-hr format)</label>
+          <input type="number" class="form-control" id="hours" name="hours" min="0" max="23" required>
+        </div>
+
+        <div class="form-group">
+          <label for="minutes">Minutes</label>
+          <input type="number" class="form-control" id="minutes" name="minutes" min="0" max="59" required>
+        </div>
+
+        <div class="form-group">
+          <label for="seconds">Seconds</label>
+          <input type="number" class="form-control" id="seconds" name="seconds" min="0" max="59" required>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block">Predict Traffic Volume</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function validateForm() {
+  const fields = ['temp', 'rain', 'snow', 'day', 'month', 'year', 'hours', 'minutes', 'seconds'];
+  for (let field of fields) {
+    const val = parseFloat(document.getElementById(field).value);
+    if (isNaN(val) || val < 0) {
+      alert(`${field} must be a non-negative number.`);
+      return false;
+    }
+  }
+
+  const day = parseInt(document.getElementById("day").value);
+  const month = parseInt(document.getElementById("month").value);
+  if (day > 31 || day < 1 || month < 1 || month > 12) {
+    alert("Enter a valid date.");
+    return false;
+  }
+
+  return true;
+}
+</script>
+
+</body>
+</html>

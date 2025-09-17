@@ -1,0 +1,72 @@
+Here is an example of a basic linked list implementation in C:
+```
+// Node structure
+typedef struct Node {
+    int data;
+    struct Node* next;
+} Node;
+
+// Function to create a new node
+Node* createNode(int data) {
+    Node* newNode = (Node*) malloc(sizeof(Node));
+    newNode->data = data;
+    newNode->next = NULL;
+    return newNode;
+}
+
+// Function to insert a new node at the beginning of the list
+void insertAtBeginning(Node** head, int data) {
+    Node* newNode = createNode(data);
+    newNode->next = *head;
+    *head = newNode;
+}
+
+// Function to print the linked list
+void printList(Node* head) {
+    while (head != NULL) {
+        printf("%d ", head->data);
+        head = head->next;
+    }
+    printf("\n");
+}
+
+// Function to free the linked list
+void freeList(Node** head) {
+    Node* temp = *head;
+    while (temp != NULL) {
+        Node* next = temp->next;
+        free(temp);
+        temp = next;
+    }
+    *head = NULL;
+}
+
+int main() {
+    Node* head = NULL;
+
+    insertAtBeginning(&head, 1);
+    insertAtBeginning(&head, 2);
+    insertAtBeginning(&head, 3);
+    insertAtBeginning(&head, 4);
+    insertAtBeginning(&head, 5);
+
+    printList(head); // Output: 5 4 3 2 1
+
+    freeList(&head);
+
+    return 0;
+}
+```
+This code defines a `Node` struct to represent each element in the linked list, with an `int` data field and a `next` field to point to the next node in the list.
+
+The `createNode` function allocates memory for a new node and initializes its fields.
+
+The `insertAtBeginning` function inserts a new node at the beginning of the list.
+
+The `printList` function prints the elements of the linked list.
+
+The `freeList` function frees the memory allocated for the linked list.
+
+In the `main` function, we create a linked list with 5 elements and print it. Finally, we free the memory allocated for the list.
+
+Note: This is a basic implementation and you may want to add more functionality to your linked list, such as inserting at the end, deleting nodes, etc.

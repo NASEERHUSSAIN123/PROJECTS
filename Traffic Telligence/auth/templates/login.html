@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Here</title>
+    <style>
+        body {
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: rgb(180, 200, 240);
+            justify-content: center;
+            align-items: center;
+        }
+        .login-container {
+            width: 450px;
+            padding: 20px;
+            background: rgb(140, 160, 190);
+            box-shadow: 0 0 20px white inset;
+            border-radius: 8px;
+            color: black;
+        }
+        .login-container input {
+            width: 90%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid black;
+            border-radius: 5px;
+            background-color: rgb(140, 160, 190);
+        }
+        .login-container button {
+            width: 100%;
+            padding: 12px;
+            background-color: rgb(140, 160, 190);
+            border: 1px solid black;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .login-container a {
+            color: black;
+            font-size: 16px;
+            display: block;
+            margin-top: 10px;
+            text-align: center;
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+        async function sendOTP() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            
+            if (!email || !password) {
+                alert("Email and password are required.");
+                return;
+            }
+
+            const response = await fetch('/send-otp', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            alert(data.message);
+        }
+
+        async function verifyOTP() {
+            const email = document.getElementById("email").value;
+            const otp = document.getElementById("otp").value;
+
+            if (!otp) {
+                alert("Please enter the OTP.");
+                return;
+            }
+
+            const response = await fetch('/verify-otp', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email, otp })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                alert(data.message);
+                window.location.href = data.redirect;  // Redirect to interface.html
+            } else {
+                alert(data.message);
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="login-container">
+        <h2>Login to continue</h2>
+        {% if message %}
+        <p style="color:green;">{{ message }}</p>
+        {% endif %}
+        <form id="otp-form">
+            <input type="email" id="email" name="email" placeholder="Email" required>
+            <input type="password" id="password" name="password" placeholder="Password" required>
+            <br><br>
+            <button type="button" onclick="sendOTP()">Send OTP</button>
+            <br><br>
+        </form>
+        <form id="verify-form">
+            <input type="text" id="otp" name="otp" placeholder="Enter OTP" required>
+            <br><br>
+            <button type="button" onclick="verifyOTP()">Verify OTP</button>
+        </form>
+        <a href="{{ url_for('register') }}">Don't have an account? Register Here</a>
+    </div>
+</body>
+</html>
