@@ -1,0 +1,55 @@
+{% extends 'users/userbase.html' %}
+{% load static %}
+
+<link rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+
+{% block contents %}
+<div class="container mt-4">
+
+    <h1 class="text-info mb-4">GAN–BERT Hybrid Anomaly Detection Results</h1>
+
+    <!-- ================= METRICS ================= -->
+    <h3 class="mt-4">Evaluation Metrics (Hybrid Model)</h3>
+    <ul>
+        <li><strong>Accuracy:</strong> {{ metrics.accuracy }}</li>
+        <li><strong>Precision:</strong> {{ metrics.precision }}</li>
+        <li><strong>Recall:</strong> {{ metrics.recall }}</li>
+        <li><strong>F1 Score:</strong> {{ metrics.f1 }}</li>
+        <li><strong>AUC:</strong> {{ metrics.auc }}</li>
+    </ul>
+
+    <!-- ================= CONFUSION MATRIX ================= -->
+    <h3 class="mt-4">Confusion Matrix</h3>
+    <pre>{{ metrics.conf_matrix }}</pre>
+
+    <!-- ================= SAMPLE RESULTS ================= -->
+    <h3 class="mt-4">Sample Detection Results</h3>
+    <p class="text-muted">
+        Below table shows individual predictions from
+        <strong>GAN</strong>, <strong>BERT</strong>, and
+        <strong>Hybrid (GAN + BERT)</strong> model.
+    </p>
+    {{ results|safe }}
+
+    <!-- ================= VISUALIZATIONS ================= -->
+    <h3 class="mt-5">Visualizations</h3>
+
+    <div class="row">
+        {% for img in images %}
+        <div class="col-md-6 mb-4 text-center">
+            <img src="{% static img %}" class="img-fluid border rounded" alt="Graph">
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ================= LEGEND ================= -->
+    <h4 class="mt-4">Model Interpretation</h4>
+    <ul>
+        <li><strong>GAN:</strong> Detects anomalies based on numerical traffic distribution</li>
+        <li><strong>BERT:</strong> Detects anomalies using semantic packet descriptions</li>
+        <li><strong>Hybrid:</strong> Weighted fusion of GAN (60%) and BERT (40%)</li>
+    </ul>
+
+</div>
+{% endblock %}

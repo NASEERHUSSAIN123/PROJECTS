@@ -1,0 +1,93 @@
+{% extends 'users/userbase.html'%}
+{%load static%}
+{%block contents%}
+<h1>Traffic Identification Level</h1>
+
+<div class="container mt-4">
+
+    <h3>🚦 Network Traffic Safety Prediction</h3>
+
+    <form action="{% url 'predict_incoming_traffic' %}" method="POST">
+        {% csrf_token %}
+
+        <div class="row">
+            <div class="col-md-4">
+                <label>Packet Size</label>
+                <input type="number" name="packet_size" class="form-control" required>
+            </div>
+
+            <div class="col-md-4">
+                <label>Source Port</label>
+                <input type="number" name="src_port" class="form-control" required>
+            </div>
+
+            <div class="col-md-4">
+                <label>Destination Port</label>
+                <input type="number" name="dest_port" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-4">
+                <label>Duration (seconds)</label>
+                <input type="text" name="duration" class="form-control" required>
+            </div>
+
+            <div class="col-md-4">
+                <label>Protocol Type</label>
+                <select name="protocol_type" class="form-control" required>
+                    <option value="0">TCP</option>
+                    <option value="1">UDP</option>
+                    <option value="2">ICMP</option>
+                    <option value="3">Other</option>
+                </select>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-4">
+            🔍 Predict Traffic
+        </button>
+    </form>
+
+    {% if prediction %}
+        <hr>
+        <h4>🔎 Prediction Result</h4>
+
+        <table class="table table-bordered mt-3">
+            <tr>
+                <th>Status</th>
+                <td>
+                    {% if prediction.status == "UNSAFE" %}
+                        <span class="text-danger fw-bold">🚨 UNSAFE</span>
+                    {% else %}
+                        <span class="text-success fw-bold">✅ SAFE</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <th>Traffic Level &nbsp;</th>
+                <td>{{ prediction.traffic_level }}</td>
+            </tr>
+            <tr>
+                <th>Final Score</th>
+                <td>{{ prediction.final_score|floatformat:3 }}</td>
+            </tr>
+            <tr>
+                <th>GAN Score</th>
+                <td>{{ prediction.gan_score|floatformat:3 }}</td>
+            </tr>
+            <tr>
+                <th>BERT Score</th>
+                <td>{{ prediction.bert_score|floatformat:3 }}</td>
+            </tr>
+        </table>
+    {% endif %}
+
+    {% if error %}
+        <div class="alert alert-danger mt-3">
+            {{ error }}
+        </div>
+    {% endif %}
+
+</div>
+{%endblock%}
