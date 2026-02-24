@@ -1,19 +1,33 @@
 from flask import Flask, request, render_template, jsonify, redirect, url_for
+import os
 import random
 import smtplib
+import googlemaps
+from datetime import datetime
 from email.mime.text import MIMEText
-import os
 from pymongo import MongoClient
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from xgboost import XGBRegressor
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
 
-# MongoDB Configuration with Error Handling
+# ==========================================
+# 1. CONFIGURATION & PATHS
+# ==========================================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATASET_PATH = os.path.join(BASE_DIR, "traffic_volume.csv")
+
+# Google Maps Setup (REPLACE WITH YOUR KEY)
+GMAPS_KEY = os.getenv("GMAPS_API_KEY") 
+gmaps = googlemaps.Client(key=GMAPS_KEY)
+
+# MongoDB Setup
 try:
     client = MongoClient('mongodb://localhost:27017/')
     db = client['APSCHE']
@@ -21,22 +35,21 @@ try:
 except Exception as e:
     print(f"Error connecting to MongoDB: {e}")
 
-# OTP Storage
+# Email & OTP Setup
 otp_store = {}
-
-# Email Credentials
 EMAIL_SENDER = "clginternshipacc@gmail.com"
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD", "asrn pwxu jile azwt")  # Use env var in production
+EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")
 
+# ==========================================
+# 2. HELPER FUNCTIONS & ML INITIALIZATION
+# ==========================================
 def send_email(email, otp):
-    subject = "Your OTP Code"
-    message = f"Your OTP code is {otp}. Use it to log in."
-
+    subject = "Traffic Telligence - Your OTP Code"
+    message = f"Your OTP code for secure login is {otp}."
     msg = MIMEText(message)
     msg['Subject'] = subject
     msg['From'] = EMAIL_SENDER
     msg['To'] = email
-
     try:
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
@@ -46,6 +59,43 @@ def send_email(email, otp):
         print(f"Error sending email: {e}")
         return False
 
+def initialize_system():
+    if not os.path.exists(DATASET_PATH):
+        print(f"CRITICAL ERROR: Dataset not found at {DATASET_PATH}")
+        return None, None, None, {}
+
+    data = pd.read_csv(DATASET_PATH)
+    le = LabelEncoder()
+    data['weather'] = le.fit_transform(data['weather'].fillna('Clouds'))
+    
+    features = ['holiday', 'temp', 'rain', 'snow', 'weather', 'day', 'month', 'year', 'hours']
+    target = 'traffic_volume'
+    
+    X = data[features]
+    y = data[target]
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    
+    sc = StandardScaler()
+    X_train_scaled = sc.fit_transform(X_train)
+    X_test_scaled = sc.transform(X_test)
+    
+    regressor = XGBRegressor(objective='reg:squarederror', n_estimators=100, random_state=42)
+    regressor.fit(X_train_scaled, y_train)
+    
+    y_pred = regressor.predict(X_test_scaled)
+    metrics = {
+        "mae": round(mean_absolute_error(y_test, y_pred), 2),
+        "rmse": round(np.sqrt(mean_squared_error(y_test, y_pred)), 2),
+        "r2": round(r2_score(y_test, y_pred), 4)
+    }
+    return regressor, sc, le, metrics
+
+model, scaler, weather_encoder, model_metrics = initialize_system()
+
+# ==========================================
+# 3. AUTHENTICATION ROUTES
+# ==========================================
 @app.route('/')
 def index():
     return render_template('login.html')
@@ -60,25 +110,19 @@ def register():
         confirm_password = request.form.get('confirmPwd')
 
         if not all([fname, lname, email, password, confirm_password]):
-            return "All fields are required.", 400
-
+            return render_template('register.html', error="All fields are required.")
         if password != confirm_password:
-            return "Passwords do not match.", 400
-
-        # Check if email already exists
+            return render_template('register.html', error="Passwords do not match.")
         if users_collection.find_one({"email": email}):
-            return "User already registered.", 400
+            return render_template('register.html', error="User already registered.")
 
-        # Insert user into MongoDB
         users_collection.insert_one({
             "first_name": fname,
             "last_name": lname,
             "email": email,
             "password": password
         })
-
-        return redirect(url_for('index'))
-
+        return redirect(url_for('index', msg="Registration successful! Please login."))
     return render_template('register.html')
 
 @app.route('/send-otp', methods=['POST'])
@@ -87,22 +131,16 @@ def send_otp():
     email = data.get('email')
     password = data.get('password')
 
-    if not email or not password:
-        return jsonify({"message": "Email and password are required"}), 400
-
-    # Validate user credentials
     user = users_collection.find_one({"email": email, "password": password})
     if not user:
         return jsonify({"message": "Invalid email or password"}), 401
 
-    # Generate OTP
     otp = random.randint(100000, 999999)
     otp_store[email] = otp
 
     if send_email(email, otp):
         return jsonify({"message": f"OTP sent to {email}"}), 200
-    else:
-        return jsonify({"message": "Failed to send OTP"}), 500
+    return jsonify({"message": "Failed to send OTP"}), 500
 
 @app.route('/verify-otp', methods=['POST'])
 def verify_otp():
@@ -119,97 +157,79 @@ def verify_otp():
 
     return jsonify({"message": "Incorrect OTP. Try again"}), 400
 
+# ==========================================
+# 4. PREDICTION ROUTES
+# ==========================================
 @app.route('/interface')
 def interface():
-    return render_template('interface.html')
+    # Pass both the metrics AND the API key to the template
+    return render_template('interface.html', 
+                           metrics=model_metrics, 
+                           gmaps_key=GMAPS_KEY)
 
-# Load dataset
-data = pd.read_csv(r"D:\Internship APSCHE\traffic volume.csv")
+@app.route('/predict-live', methods=['POST'])
+def predict_live():
+    try:
+        origin = request.form.get('origin')
+        destination = request.form.get('destination')
+        now = datetime.now()
+        
+        directions = gmaps.distance_matrix(origin, destination, mode="driving", departure_time=now)
+        element = directions['rows'][0]['elements'][0]
+        
+        if element['status'] != 'OK':
+            return render_template('interface.html', error="Route not found.", metrics=model_metrics)
+            
+        traffic_time = element['duration_in_traffic']['value']
+        normal_time = element['duration']['value']
+        congestion_ratio = traffic_time / normal_time
 
-# Encode 'weather' column
-weather_encoder = LabelEncoder()
-data['weather'] = weather_encoder.fit_transform(data['weather'].fillna('Clouds'))
+        live_input = pd.DataFrame([[
+            0, now.hour + 273, 0.0, 0.0, 
+            weather_encoder.transform(['Clouds'])[0],
+            now.day, now.month, now.year, now.hour
+        ]], columns=['holiday', 'temp', 'rain', 'snow', 'weather', 'day', 'month', 'year', 'hours'])
 
-# Define features and target
-features = ['holiday', 'temp', 'rain', 'snow', 'weather', 'day', 'month', 'year', 'hours', 'minutes', 'seconds']
-target = 'traffic_volume'
+        scaled_input = scaler.transform(live_input)
+        base_prediction = model.predict(scaled_input)[0]
+        final_volume = base_prediction * congestion_ratio
 
-X = data[features]
-y = data[target]
-
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-
-# Feature scaling
-scaler = StandardScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
-
-# Train XGBRegressor
-model = XGBRegressor(objective='reg:squarederror', random_state=42)
-model.fit(X_train_scaled, y_train)
+        return render_template('result.html', 
+                               volume=int(final_volume), # Converted to whole number of vehicles
+                               ratio=round(congestion_ratio, 2),
+                               origin=origin, destination=destination,
+                               metrics=model_metrics, mode="Live Data")
+    except Exception as e:
+        return render_template('interface.html', error=f"Error: {str(e)}", metrics=model_metrics)
 
 @app.route('/process', methods=['POST'])
 def process():
     try:
-        # Parse form inputs
-        holiday = request.form.get('holiday', "").strip()
-        temp = request.form.get('temp', "").strip()
-        rain = request.form.get('rain', "").strip()
-        snow = request.form.get('snow', "").strip()
-        weather = request.form.get('weather', "").strip()
-        day = request.form.get('day', "").strip()
-        month = request.form.get('month', "").strip()
-        year = request.form.get('year', "").strip()
-        hours = request.form.get('hours', "").strip()
-        minutes = request.form.get('minutes', "").strip()
-        seconds = request.form.get('seconds', "").strip()
+        holiday = request.form.get('holiday', "0")
+        temp = request.form.get('temp', "290")
+        rain = request.form.get('rain', "0")
+        snow = request.form.get('snow', "0")
+        weather = request.form.get('weather', "Clouds")
+        day = request.form.get('day', "1")
+        month = request.form.get('month', "1")
+        year = request.form.get('year', "2024")
+        hours = request.form.get('hours', "12")
 
-        # Validate all fields
-        fields = [holiday, temp, rain, snow, weather, day, month, year, hours, minutes, seconds]
-        if not all(fields):
-            return jsonify({"error": "All fields must be provided."}), 400
-
-        # Convert types
         input_data = pd.DataFrame([[
-            int(holiday),
-            float(temp),
-            float(rain),
-            float(snow),
+            int(holiday), float(temp), float(rain), float(snow),
             weather_encoder.transform([weather])[0],
-            int(day),
-            int(month),
-            int(year),
-            int(hours),
-            int(minutes),
-            int(seconds)
-        ]], columns=[
-            'holiday', 'temp', 'rain', 'snow', 'weather',
-            'day', 'month', 'year', 'hours', 'minutes', 'seconds'
-        ])
+            int(day), int(month), int(year), int(hours)
+        ]], columns=['holiday', 'temp', 'rain', 'snow', 'weather', 'day', 'month', 'year', 'hours'])
 
-        # Scale
-        input_scaled = scaler.transform(input_data)
+        scaled_input = scaler.transform(input_data)
+        predicted_volume = model.predict(scaled_input)[0]
 
-        # Predict
-        predicted_volume = model.predict(input_scaled)[0]
-
-        # Render result page
         return render_template('result.html',
-                               predicted_volume=round(predicted_volume, 2),
-                               inputs={
-                                   'Holiday': holiday,
-                                   'Temp (K)': temp,
-                                   'Rain (mm)': rain,
-                                   'Snow (mm)': snow,
-                                   'Weather': weather,
-                                   'Date': f"{day}/{month}/{year}",
-                                   'Time': f"{hours}:{minutes}:{seconds}"
-                               })
-
+                               volume=int(predicted_volume),
+                               ratio="N/A", origin="Manual Input", destination="Manual Input",
+                               metrics=model_metrics, mode="Manual Input")
     except Exception as e:
-        return jsonify({"error": f"Processing error: {str(e)}"}), 500
-
+        return render_template('interface.html', error=f"Error: {str(e)}", metrics=model_metrics)
 
 if __name__ == "__main__":
     app.run(debug=True, port=5001)

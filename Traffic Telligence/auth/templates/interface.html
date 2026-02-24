@@ -1,120 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Traffic Volume Prediction</title>
+  <title>Dashboard - Traffic Telligence</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+  
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key={{ gmaps_key }}&libraries=places"></script>
+  
+  <style>
+    body { background-color: #f4f7f6; padding-top: 40px; }
+    .card { border-radius: 10px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .nav-tabs .nav-link.active { font-weight: bold; color: #007bff; border-bottom: 3px solid #007bff;}
+    /* Styling for the new Google Web Components to match Bootstrap */
+    gmp-place-autocomplete {
+        width: 100%;
+        display: block;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+        padding: .375rem .75rem;
+        background-color: #fff;
+    }
+  </style>
 </head>
 <body>
 
 <div class="container">
   <div class="row justify-content-center">
-    <div class="col-sm-8">
-      <h2 class="text-center">Traffic Volume Prediction</h2>
-      <form action="/process" method="POST" onsubmit="return validateForm()">
-        <div class="form-group">
-          <label for="holiday">Is it a Holiday?</label>
-          <select class="form-control" id="holiday" name="holiday" required>
-            <option value="" disabled selected>Select</option>
-            <option value="1">Yes</option>
-            <option value="0">No</option>
-          </select>
-        </div>
+    <div class="col-lg-8 col-md-10">
+      
+      <div class="d-flex justify-content-between align-items-center mb-4">
+          <h2 class="text-primary m-0">Traffic Telligence</h2>
+          <a href="{{ url_for('index') }}" class="btn btn-sm btn-outline-danger">Logout</a>
+      </div>
 
-        <div class="form-group">
-          <label for="temp">Temperature (in Kelvin)</label>
-          <input type="number" class="form-control" id="temp" name="temp" step="any" required>
-        </div>
+      {% if error %}
+      <div class="alert alert-danger alert-dismissible fade show">
+          {{ error }}
+          <button type="button" class="close" data-dismiss="alert">&times;</button>
+      </div>
+      {% endif %}
 
-        <div class="form-group">
-          <label for="rain">Rain (in mm)</label>
-          <input type="number" class="form-control" id="rain" name="rain" step="any" required>
-        </div>
+      <div class="card p-4 mb-5">
+        <ul class="nav nav-tabs mb-4" id="predictionTab" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="live-tab" data-toggle="tab" href="#live" role="tab">Live AI Prediction</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="manual-tab" data-toggle="tab" href="#manual" role="tab">Manual Data Override</a>
+          </li>
+        </ul>
 
-        <div class="form-group">
-          <label for="snow">Snow (in mm)</label>
-          <input type="number" class="form-control" id="snow" name="snow" step="any" required>
-        </div>
+        <div class="tab-content">
+          <div class="tab-pane fade show active" id="live" role="tabpanel">
+            <form action="/predict-live" method="POST" id="live-form">
+              
+              <input type="hidden" id="origin_hidden" name="origin">
+              <input type="hidden" id="destination_hidden" name="destination">
 
-        <div class="form-group">
-            <label for="weather">Weather Condition</label>
-            <select class="form-control" id="weather" name="weather" required>
-                <option value="" disabled selected>Select Weather</option>
-                <option value="Clear">Clear</option>
-                <option value="Clouds">Clouds</option>
-                <option value="Rain">Rain</option>
-                <option value="Drizzle">Drizzle</option>
-                <option value="Mist">Mist</option>
-                <option value="Haze">Haze</option>
-                <option value="Fog">Fog</option>
-                <option value="Thunderstorm">Thunderstorm</option>
-                <option value="Snow">Snow</option>
-                <option value="Squall">Squall</option>
-                <option value="Smoke">Smoke</option>
-        </select>
-        </div>
+              <div class="form-group">
+                <label class="font-weight-bold text-muted">Origin</label>
+                <gmp-place-autocomplete id="origin" placeholder="Start typing address..."></gmp-place-autocomplete>
+              </div>
+              <div class="form-group">
+                <label class="font-weight-bold text-muted">Destination</label>
+                <gmp-place-autocomplete id="destination" placeholder="Start typing address..."></gmp-place-autocomplete>
+              </div>
+              <div class="alert alert-info py-2 small mt-3">
+                  <strong>Note:</strong> Weather, date, and time features will be automatically pulled from current real-world conditions.
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg btn-block mt-4">Predict Live Traffic Volume</button>
+            </form>
+          </div>
 
-        <div class="form-group">
-          <label for="day">Day</label>
-          <input type="number" class="form-control" id="day" name="day" min="1" max="31" required>
-        </div>
+          <div class="tab-pane fade" id="manual" role="tabpanel">
+            <form action="/process" method="POST">
+              <div class="row">
+                  <div class="col-md-6 form-group">
+                    <label>Is it a Holiday?</label>
+                    <select class="form-control" name="holiday" required>
+                      <option value="0">No</option>
+                      <option value="1">Yes</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6 form-group">
+                      <label>Weather Condition</label>
+                      <select class="form-control" name="weather" required>
+                          <option value="Clear">Clear</option>
+                          <option value="Clouds" selected>Clouds</option>
+                          <option value="Rain">Rain</option>
+                          <option value="Snow">Snow</option>
+                          <option value="Mist">Mist</option>
+                      </select>
+                  </div>
+              </div>
 
-        <div class="form-group">
-          <label for="month">Month</label>
-          <input type="number" class="form-control" id="month" name="month" min="1" max="12" required>
-        </div>
+              <div class="row">
+                  <div class="col-md-4 form-group"><label>Temp (K)</label><input type="number" class="form-control" name="temp" value="290" step="any" required></div>
+                  <div class="col-md-4 form-group"><label>Rain (mm)</label><input type="number" class="form-control" name="rain" value="0" step="any" required></div>
+                  <div class="col-md-4 form-group"><label>Snow (mm)</label><input type="number" class="form-control" name="snow" value="0" step="any" required></div>
+              </div>
 
-        <div class="form-group">
-          <label for="year">Year</label>
-          <input type="number" class="form-control" id="year" name="year" min="2000" max="2030" required>
-        </div>
+              <div class="row">
+                  <div class="col-md-4 form-group"><label>Day</label><input type="number" class="form-control" name="day" min="1" max="31" value="15" required></div>
+                  <div class="col-md-4 form-group"><label>Month</label><input type="number" class="form-control" name="month" min="1" max="12" value="6" required></div>
+                  <div class="col-md-4 form-group"><label>Year</label><input type="number" class="form-control" name="year" min="2000" max="2030" value="2024" required></div>
+              </div>
 
-        <div class="form-group">
-          <label for="hours">Hour (24-hr format)</label>
-          <input type="number" class="form-control" id="hours" name="hours" min="0" max="23" required>
-        </div>
+              <div class="form-group">
+                <label>Hour (24-hr format)</label>
+                <input type="number" class="form-control" name="hours" min="0" max="23" value="12" required>
+              </div>
 
-        <div class="form-group">
-          <label for="minutes">Minutes</label>
-          <input type="number" class="form-control" id="minutes" name="minutes" min="0" max="59" required>
+              <button type="submit" class="btn btn-secondary btn-block mt-3">Run Manual Simulation</button>
+            </form>
+          </div>
         </div>
-
-        <div class="form-group">
-          <label for="seconds">Seconds</label>
-          <input type="number" class="form-control" id="seconds" name="seconds" min="0" max="59" required>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block">Predict Traffic Volume</button>
-      </form>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
-function validateForm() {
-  const fields = ['temp', 'rain', 'snow', 'day', 'month', 'year', 'hours', 'minutes', 'seconds'];
-  for (let field of fields) {
-    const val = parseFloat(document.getElementById(field).value);
-    if (isNaN(val) || val < 0) {
-      alert(`${field} must be a non-negative number.`);
-      return false;
-    }
-  }
+  window.addEventListener('load', () => {
+    const form = document.getElementById('live-form');
+    const originGmp = document.getElementById('origin');
+    const destGmp = document.getElementById('destination');
+    const originHidden = document.getElementById('origin_hidden');
+    const destHidden = document.getElementById('destination_hidden');
 
-  const day = parseInt(document.getElementById("day").value);
-  const month = parseInt(document.getElementById("month").value);
-  if (day > 31 || day < 1 || month < 1 || month > 12) {
-    alert("Enter a valid date.");
-    return false;
-  }
+    form.addEventListener('submit', (e) => {
+      // Sync values from the web components to the hidden standard inputs
+      originHidden.value = originGmp.value;
+      destHidden.value = destGmp.value;
 
-  return true;
-}
+      // Prevent submission if the user hasn't typed anything
+      if (!originHidden.value || !destHidden.value) {
+        e.preventDefault();
+        alert("Please select both a valid Origin and Destination.");
+      }
+    });
+  });
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,31 +1,76 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <title>Traffic Volume Prediction Result</title>
+    <title>Prediction - Traffic Telligence</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <style>
+        body { background-color: #f4f7f6; padding-top: 40px; }
+        .card { border-radius: 10px; border: none; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    </style>
 </head>
 <body>
-<div class="container mt-5">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h4>Traffic Volume Prediction Result</h4>
+<div class="container">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary m-0">Traffic Telligence</h2>
+        <a href="/interface" class="btn btn-sm btn-outline-secondary">New Prediction</a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-7 mb-4">
+            <div class="card p-4 h-100 border-left-primary" style="border-left: 5px solid #007bff;">
+                <h4 class="text-muted border-bottom pb-2 mb-3">AI Prediction Result</h4>
+                
+                <div class="mb-3">
+                    <span class="badge badge-pill badge-primary px-3 py-2">Mode: {{ mode }}</span>
+                </div>
+                
+                {% if mode == "Live Data" %}
+                    <p><strong>Route:</strong><br> <span class="text-secondary">{{ origin }} <br>➔ {{ destination }}</span></p>
+                    <p><strong>Live Congestion Ratio:</strong> 
+                        {% if ratio > 1.2 %}
+                            <span class="text-danger font-weight-bold">{{ ratio }}x (Heavy Traffic)</span>
+                        {% elif ratio > 1.0 %}
+                            <span class="text-warning font-weight-bold">{{ ratio }}x (Moderate Traffic)</span>
+                        {% else %}
+                            <span class="text-success font-weight-bold">{{ ratio }}x (Clear)</span>
+                        {% endif %}
+                    </p>
+                {% else %}
+                    <p class="text-muted">Prediction processed using manual dataset simulation parameters.</p>
+                {% endif %}
+
+                <div class="bg-light p-3 rounded text-center mt-auto border">
+                    <h5 class="text-muted mb-1">Estimated Traffic Volume</h5>
+                    <h1 class="text-primary display-4 font-weight-bold m-0">{{ volume }}</h1>
+                    <small class="text-muted">Active Vehicles</small>
+                </div>
+            </div>
         </div>
-        <div class="card-body">
-            <p><strong>Predicted Traffic Volume:</strong> {{ predicted_volume }} vehicles</p>
-
-            <hr>
-            <h5>Input Summary:</h5>
-            <ul>
-                <li><strong>Holiday:</strong> {{ inputs['Holiday'] }}</li>
-                <li><strong>Temperature (K):</strong> {{ inputs['Temp (K)'] }}</li>
-                <li><strong>Rain (mm):</strong> {{ inputs['Rain (mm)'] }}</li>
-                <li><strong>Snow (mm):</strong> {{ inputs['Snow (mm)'] }}</li>
-                <li><strong>Weather:</strong> {{ inputs['Weather'] }}</li>
-                <li><strong>Date:</strong> {{ inputs['Date'] }}</li>
-                <li><strong>Time:</strong> {{ inputs['Time'] }}</li>
-            </ul>
-
-            <a href="/" class="btn btn-secondary">Go Back</a>
+        
+        <div class="col-md-5 mb-4">
+            <div class="card p-4 h-100 bg-dark text-white">
+                <h4 class="border-bottom border-secondary pb-2 mb-3 text-light">XGBoost Diagnostics</h4>
+                <p class="small text-secondary mb-4">Real-time evaluation metrics calculated from the <code>traffic_volume.csv</code> testing split.</p>
+                
+                <table class="table table-dark table-borderless table-sm">
+                    <tr>
+                        <td class="text-muted">Mean Absolute Error (MAE):</td>
+                        <td class="text-info font-weight-bold text-right">{{ metrics.mae }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Root Mean Sq. Error (RMSE):</td>
+                        <td class="text-warning font-weight-bold text-right">{{ metrics.rmse }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted border-top border-secondary pt-2 mt-2">R² Accuracy Score:</td>
+                        <td class="text-success font-weight-bold text-right border-top border-secondary pt-2 mt-2">{{ metrics.r2 * 100 }}%</td>
+                    </tr>
+                </table>
+                <div class="mt-auto pt-3 text-center">
+                    <a href="/interface" class="btn btn-outline-light btn-sm px-4">Return to Dashboard</a>
+                </div>
+            </div>
         </div>
     </div>
 </div>
