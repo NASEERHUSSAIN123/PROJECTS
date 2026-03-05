@@ -1,14 +1,33 @@
-# Create your views here.
+import os
+import random
+import numpy as np
+import pandas as pd
 import markdown
 import matplotlib
-from django.shortcuts import redirect
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import tensorflow as tf
+
+from django.conf import settings
+from django.core.cache import cache
+from django.shortcuts import render, redirect
 from django.utils.safestring import mark_safe
+from django.contrib import messages
+from django.http import HttpResponse
+
 from transformers import BertTokenizer, TFBertModel, DistilBertTokenizer, TFDistilBertModel
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    confusion_matrix, roc_curve, auc
+)
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization
+from tensorflow.keras.optimizers import Adam
 
 from .forms import UserRegistrationForm
 from .models import UserRegistrationModel, TokenCountModel
-
-matplotlib.use('Agg')
 
 ALGORITHM = "HS256"
 
@@ -32,37 +51,6 @@ def UserRegisterActions(request):
         form = UserRegistrationForm()
     return render(request, 'UserRegistrations.html', {'form': form})
 
-#
-# def UserLoginCheck(request):
-#     if request.method == "POST":
-#         loginid = request.POST.get('loginid')
-#         pswd = request.POST.get('pswd')
-#         print("Login ID = ", loginid, ' Password = ', pswd)
-#         try:
-#             check = UserRegistrationModel.objects.get(loginid=loginid, password=pswd)
-#             status = check.status
-#             print('Status is = ', status)
-#             if status == "activated":
-#                 request.session['id'] = check.id
-#                 request.session['loggeduser'] = check.name
-#                 request.session['loginid'] = loginid
-#                 request.session['email'] = check.email
-#                 data = {'loginid': loginid}
-#
-#                 print("User id At", check.id, status)
-#                 return render(request, 'users/UserHomePage.html', {})
-#             else:
-#                 messages.success(request, 'Your Account Not at activated')
-#                 return render(request, 'UserLogin.html')
-#         except Exception as e:
-#             print('Exception is ', str(e))
-#             pass
-#         messages.success(request, 'Invalid Login id and password')
-#     return render(request, 'UserLogin.html', {})
-#
-from django.core.cache import cache
-from django.shortcuts import render
-from django.contrib import messages
 
 def UserLoginCheck(request):
     if request.method == "POST":
@@ -99,8 +87,6 @@ def UserLoginCheck(request):
 
     return render(request, "UserLogin.html")
 
-import random
-from django.http import HttpResponse
 
 def qr_scan(request):
     token = request.GET.get("token")
@@ -149,9 +135,9 @@ def verify_qr_otp(request):
 
         return render(request, "users/UserHomePage.html")
 
+
 def UserHome(request):
     return render(request, 'users/UserHomePage.html', {})
-
 
 
 def usr_synthesis_data(request):
@@ -167,31 +153,6 @@ def usr_synthesis_data(request):
     else:
         return render(request, 'users/synthesis_data_gen.html', {})
 
-# ===============================
-# GAN + BERT (DISTILBERT) SETUP
-# ===============================
-import os
-import numpy as np
-import pandas as pd
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import tensorflow as tf
-
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    confusion_matrix, roc_curve, auc
-)
-
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LeakyReLU, BatchNormalization
-from tensorflow.keras.optimizers import Adam
-
-from transformers import DistilBertTokenizer, TFDistilBertModel
-from django.conf import settings
-from django.shortcuts import render
 
 # ===============================
 # LOAD DISTILBERT (CPU SAFE)
@@ -237,40 +198,7 @@ def generate_new_incoming_data(num_samples=500):
     df = pd.concat([normal, anomaly], ignore_index=True)
     df["true_label"] = [0]*len(normal) + [1]*len(anomaly)
     return df.sample(frac=1).reset_index(drop=True)
-def predict_traffic(packet_dict):
-    """
-    packet_dict = {
-        "packet_size": int,
-        "src_port": int,
-        "dest_port": int,
-        "duration": float,
-        "protocol_type": int
-    }
-    """
 
-    df = pd.DataFrame([packet_dict])
-
-    # ---- GAN SCORE ----
-    scaled = scaler.transform(df)
-    gan_score = 1 - discriminator.predict(scaled, verbose=0).flatten()[0]
-
-    # ---- BERT SCORE ----
-    text = packet_to_text(df.iloc[0])
-    emb = extract_bert_embeddings([text])
-    bert_score = bert_anomaly_score(emb, bert_normal_mean)[0]
-
-    # ---- FINAL SCORE ----
-    final_score = 0.6 * gan_score + 0.4 * bert_score
-
-    result = {
-        "gan_score": float(gan_score),
-        "bert_score": float(bert_score),
-        "final_score": float(final_score),
-        "status": "UNSAFE" if final_score > 0.7 else "SAFE",
-        "traffic_level": traffic_level(final_score)
-    }
-
-    return result
 
 # ===============================
 # GAN MODELS
@@ -522,6 +450,7 @@ def gan_detection(request):
         ]
     })
 
+
 # ===============================
 # LOAD MODELS ONCE (GLOBAL)
 # ===============================
@@ -689,6 +618,4 @@ src_port = 21
 dest_port = 65000
 duration = 250
 protocol_type = 3
-
-
 '''
