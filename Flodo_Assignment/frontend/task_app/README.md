@@ -2,6 +2,8 @@
 
 An advanced, full-stack task management engine featuring a **Video Game Journey Map UI**, recursive dependency logic, and enterprise-grade telemetry notifications.
 
+Track : A and strech goals are all have been implemented. The project is built with a Python FastAPI backend and a Flutter frontend, designed for seamless task management and visualization.
+
 ---
 
 ## 🛠 Step-by-Step Installation
